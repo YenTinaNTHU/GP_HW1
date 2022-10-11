@@ -6,22 +6,38 @@ public class ChickMoveControl : MonoBehaviour
 {
     public float Speed;
     public float JumpForce;
+    public float BackwardForce;
     public Rigidbody rb;
+    public GameObject poop;
+
+    public Transform cam;
+
+    public AudioClip attackedSound;
+    private AudioSource mAudioSource;
 
     private Animator mAnimator;
     private bool isGrounded;
     private bool toJump;
+    private bool isAttacked;
+
     Vector3 movement;
+    Vector3 attackedDirection;
+
+    GameObject prefab;
 
     void Start()
     {
         mAnimator = GetComponent<Animator>();
+        mAudioSource = GetComponent<AudioSource>();
         rb = GetComponent<Rigidbody>();
+        isAttacked = false;
+
     }
 
     void Update()
     {
         Move();
+        Poop();
     }
 
     void FixedUpdate()
@@ -36,13 +52,24 @@ public class ChickMoveControl : MonoBehaviour
         if(movement != Vector3.zero)
         {
             Quaternion toRotate = Quaternion.LookRotation(movement, Vector3.up);
-            rb.MoveRotation( Quaternion.RotateTowards(transform.rotation, toRotate, Speed));
+            rb.MoveRotation( Quaternion.RotateTowards(transform.rotation, toRotate, Speed*0.5f));
         }
         
     }
 
-    void OnCollisionStay(){
-        isGrounded = true;
+    void OnCollisionStay(Collision other){
+        if(other.gameObject.name == "Ground" || other.gameObject.name == "Terrain")
+            isGrounded = true;
+    }
+
+    void OnTriggerEnter(Collider other)
+    {
+        if(other.transform.parent.gameObject.name == "Traps")
+        {
+            print("Collision!");
+            transform.position -= transform.forward * Time.deltaTime * BackwardForce;
+            mAudioSource.PlayOneShot(attackedSound);
+        }
     }
 
     void Move()
@@ -50,6 +77,7 @@ public class ChickMoveControl : MonoBehaviour
         float moveZ = Input.GetAxis("Vertical");
         float moveX = Input.GetAxis("Horizontal");
         movement = new Vector3(moveX, 0f, moveZ) * Speed * Time.deltaTime;
+        movement = Quaternion.AngleAxis(cam.rotation.eulerAngles.y, Vector3.up) * movement;
         
         
         if(movement != Vector3.zero)
@@ -62,6 +90,14 @@ public class ChickMoveControl : MonoBehaviour
             mAnimator.SetTrigger("Jump");
             isGrounded = false;
             toJump = true;
+        }
+    }
+
+    void Poop()
+    {
+        if(Input.GetKeyDown(KeyCode.F))
+        {
+            prefab = Instantiate(poop, transform.position, Quaternion.identity);
         }
     }
 
